@@ -51,7 +51,7 @@
       :page-size="pageSize"
       @page-changed="onPageChange"
     />
-    <add-modal
+    <modal
       v-if="showAddModal"
       @close="showAddModal = false"
       @add="addOrganization"
@@ -61,12 +61,12 @@
 
 <script>
 import Pagination from "./components/Pagination.vue";
-import AddModal from "./components/Modal.vue";
+import Modal from "./components/Modal.vue";
 
 export default {
   components: {
     Pagination,
-    AddModal,
+    Modal,
   },
   data() {
     return {

@@ -21,7 +21,7 @@
                 v-model="director"
                 @input="validateDirector"
                 required
-                placeholder="Иванов Иван Иванович"
+                placeholder="Денисов Денис Олегович"
               />
               <span
                 v-if="!isDirectorValid"
