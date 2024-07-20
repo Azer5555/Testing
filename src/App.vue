@@ -1,28 +1,26 @@
 <template>
-  <div id="app">
+  <div id="app-container">
     <h1>Справочник организаций</h1>
-    <div class="knop">
-      <input
-        v-model="searchQuery"
-        placeholder="Найти по ФИО"
-        class="search-input"
-      />
-      <button @click="showAddModal = true" class="add-button">Добавить</button>
+    <div class="controls">
+      <input v-model="query" placeholder="Найти по ФИО" class="search-input" />
+      <button @click="isAddModalVisible = true" class="add-button">
+        Добавить
+      </button>
     </div>
-    <table class="organization-table">
+    <table class="org-table">
       <thead>
         <tr>
-          <th @click="sortBy('name')">Название</th>
+          <th @click="sortTableBy('name')">Название</th>
           <th
-            @click="sortBy('director')"
+            @click="sortTableBy('director')"
             :class="{
-              'sorted-asc': sortKey === 'director' && sortOrder === 1,
-              'sorted-desc': sortKey === 'director' && sortOrder === -1,
+              'sorted-asc': sortColumn === 'director' && sortDirection === 1,
+              'sorted-desc': sortColumn === 'director' && sortDirection === -1,
             }"
           >
             ФИО директора
-            <span v-if="sortKey === 'director'">
-              <span v-if="sortOrder === 1"> ▲</span>
+            <span v-if="sortColumn === 'director'">
+              <span v-if="sortDirection === 1"> ▲</span>
               <span v-else> ▼</span>
             </span>
           </th>
@@ -31,30 +29,25 @@
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="(organization, index) in paginatedData"
-          :key="organization.id"
-        >
-          <td>{{ organization.name }}</td>
-          <td>{{ organization.director }}</td>
-          <td>{{ organization.phone }}</td>
+        <tr v-for="(org, index) in paginatedOrgs" :key="org.id">
+          <td>{{ org.name }}</td>
+          <td>{{ org.director }}</td>
+          <td>{{ org.phone }}</td>
           <td>
-            <button @click="removeOrganization(index)" class="delete-button">
-              ✖
-            </button>
+            <button @click="removeOrg(index)" class="delete-button">✖</button>
           </td>
         </tr>
       </tbody>
     </table>
     <pagination
-      :total="filteredData.length"
-      :page-size="pageSize"
-      @page-changed="onPageChange"
+      :total="filteredOrgs.length"
+      :page-size="itemsPerPage"
+      @page-changed="handlePageChange"
     />
     <modal
-      v-if="showAddModal"
-      @close="showAddModal = false"
-      @add="addOrganization"
+      v-if="isAddModalVisible"
+      @close="isAddModalVisible = false"
+      @add="addOrg"
     />
   </div>
 </template>
@@ -70,90 +63,93 @@ export default {
   },
   data() {
     return {
-      organizations: [], // Initialize with your organizations data
-      searchQuery: "",
-      sortKey: "", // Initially no sorting key
-      sortOrder: 1, // Initially ascending order
-      currentPage: 1,
-      pageSize: 2,
-      showAddModal: false,
+      orgs: [], // Данные организации
+      query: "",
+      sortColumn: "", // Ключ сортировки
+      sortDirection: 1, // Первоначально в порядке возрастания
+      currentPageNumber: 1, // Страница по умолчанию
+      itemsPerPage: 5, // Количество элементов на странице
+      isAddModalVisible: false,
     };
   },
   mounted() {
-    // Load organizations data from localStorage on component mount
-    const savedOrganizations = localStorage.getItem("organizations");
-    if (savedOrganizations) {
-      this.organizations = JSON.parse(savedOrganizations);
+    //  Загрузка данных организации из localStorage при монтировании компонента
+    const savedOrgs = localStorage.getItem("organizations");
+    if (savedOrgs) {
+      this.orgs = JSON.parse(savedOrgs);
     }
   },
   computed: {
-    filteredData() {
-      const query = this.searchQuery.trim().toLowerCase();
-      if (!query) {
-        return this.organizations; // Return all organizations if no search query
+    filteredOrgs() {
+      const searchQuery = this.query.trim().toLowerCase();
+      if (!searchQuery) {
+        // Проверка наличия поискового запроса
+        return this.orgs; // Вернуть все организации, если нет поискового запроса
       }
-      return this.organizations.filter((org) =>
-        org.director.toLowerCase().includes(query)
+      return this.orgs.filter((org) =>
+        org.director.toLowerCase().includes(searchQuery)
       );
     },
-    sortedData() {
-      const data = [...this.filteredData]; // Copy to avoid mutating original array
-      if (this.sortKey === "director") {
-        data.sort((a, b) => {
-          const nameA = a.director.toLowerCase();
-          const nameB = b.director.toLowerCase();
-          return this.sortOrder === 1
-            ? nameA.localeCompare(nameB)
-            : nameB.localeCompare(nameA);
+    sortedOrgs() {
+      const orgs = [...this.filteredOrgs];
+      if (this.sortColumn === "director") {
+        orgs.sort((a, b) => {
+          // сортировка по возрастанию и убыванию
+          const directorA = a.director.toLowerCase();
+          const directorB = b.director.toLowerCase();
+          return this.sortDirection === 1
+            ? directorA.localeCompare(directorB)
+            : directorB.localeCompare(directorA);
         });
       }
-      return data;
+      return orgs;
     },
-    paginatedData() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      return this.sortedData.slice(start, start + this.pageSize);
+    paginatedOrgs() {
+      const startIndex = (this.currentPageNumber - 1) * this.itemsPerPage;
+      return this.sortedOrgs.slice(startIndex, startIndex + this.itemsPerPage);
     },
-    totalPages() {
-      return Math.ceil(this.filteredData.length / this.pageSize);
+    totalPagesCount() {
+      return Math.ceil(this.filteredOrgs.length / this.itemsPerPage); //Вычисление общего количества страниц
     },
   },
   methods: {
-    sortBy(key) {
-      if (this.sortKey === key) {
-        this.sortOrder = -this.sortOrder; // Toggle sort order if same key clicked
+    sortTableBy(column) {
+      if (this.sortColumn === column) {
+        this.sortDirection = -this.sortDirection; // Переключить направление сортировки, если щелкнуть тот же столбец
       } else {
-        this.sortKey = key; // Change sort key
-        this.sortOrder = 1; // Default to ascending order
+        this.sortColumn = column; // Изменить столбец сортировки
+        this.sortDirection = 1; // По умолчанию - восходящее направление
       }
     },
-    onPageChange(page) {
-      this.currentPage = page; // Update current page on pagination change
+    handlePageChange(page) {
+      this.currentPageNumber = page; // Обновить текущую страницу при изменении нумерации страниц
     },
-    addOrganization(organization) {
-      this.organizations.push(organization); // Add new organization
-      this.saveOrganizations(); // Save organizations to localStorage
-      this.showAddModal = false; // Close modal after adding
+    addOrg(newOrg) {
+      this.orgs.push(newOrg); // Добавление новой организации
+      this.saveOrgs(); // Сохранение организации в localStorage
+      this.isAddModalVisible = false; // Закрытие модального окна
     },
-    removeOrganization(index) {
-      const actualIndex = (this.currentPage - 1) * this.pageSize + index;
-      this.organizations.splice(actualIndex, 1); // Remove organization using actual index
-      this.saveOrganizations(); // Save organizations to localStorage
-      if (this.paginatedData.length === 0 && this.currentPage > 1) {
-        this.currentPage--; // Move to previous page if no items left on current page
+    removeOrg(index) {
+      const actualIndex =
+        (this.currentPageNumber - 1) * this.itemsPerPage + index;
+      this.orgs.splice(actualIndex, 1); // Удалить организацию, используя фактический индекс
+      this.saveOrgs();
+      if (this.paginatedOrgs.length === 0 && this.currentPageNumber > 1) {
+        this.currentPageNumber--; // Перейти на предыдущую страницу, если на текущей странице не осталось элементов
       }
-      if (this.currentPage > this.totalPages) {
-        this.currentPage = this.totalPages; // Correct current page if it exceeds total pages
+      if (this.currentPageNumber > this.totalPagesCount) {
+        this.currentPageNumber = this.totalPagesCount; // Текущую страница, если она превышает общее количество страниц.
       }
     },
-    saveOrganizations() {
-      localStorage.setItem("organizations", JSON.stringify(this.organizations));
+    saveOrgs() {
+      localStorage.setItem("organizations", JSON.stringify(this.orgs));
     },
   },
 };
 </script>
 
 <style scoped>
-#app {
+#app-container {
   font-family: Arial, sans-serif;
   margin: 20px;
 }
@@ -161,7 +157,7 @@ export default {
 h1 {
   color: #333;
 }
-.knop {
+.controls {
   display: flex;
   justify-content: space-between;
 }
@@ -188,28 +184,28 @@ h1 {
   background-color: #00008b;
 }
 
-.organization-table {
+.org-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.organization-table th,
-.organization-table td {
+.org-table th,
+.org-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
 
-.organization-table th {
+.org-table th {
   background-color: #f2f2f2;
   cursor: pointer;
   text-align: center;
 }
 
-.organization-table th:nth-child(4),
-.organization-table td:nth-child(4) {
-  width: 50px; /* Устанавливаем фиксированную ширину столбца */
-  text-align: center; /* Выравниваем текст по центру */
+.org-table th:nth-child(4),
+.org-table td:nth-child(4) {
+  width: 50px;
+  text-align: center;
 }
 .delete-button {
   padding: 5px 10px;

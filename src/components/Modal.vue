@@ -1,58 +1,62 @@
 <template>
   <div>
     <!-- Основное модальное окно -->
-    <div class="modal" v-if="showModal">
-      <div class="modal-content">
+    <div class="modal-container" v-if="isModalVisible">
+      <div class="modal-body">
         <h2>Добавить организацию</h2>
-        <form @submit.prevent="submitForm">
-          <div class="form-group">
+        <form @submit.prevent="handleFormSubmit">
+          <div class="field-group">
             <label> Название: </label>
             <input
-              v-model="name"
-              @input="validateName"
+              v-model="orgName"
+              @input="checkName"
               required
               placeholder="Введите название организации"
             />
           </div>
-          <div class="form-group">
+          <div class="field-group">
             <label> ФИО директора:</label>
-            <div class="input-container">
+            <div class="input-wrapper">
               <input
-                v-model="director"
-                @input="validateDirector"
+                v-model="directorName"
+                @input="checkDirector"
                 required
                 placeholder="Денисов Денис Олегович"
               />
               <span
                 v-if="!isDirectorValid"
-                class="error-icon"
-                @click="showDirectorError = true"
+                class="warning-icon"
+                @click="showDirectorWarning = true"
                 >&#9888;</span
               >
             </div>
           </div>
-          <div class="form-group">
+          <div class="field-group">
             <label> Номер телефона:</label>
-            <div class="input-container">
+            <div class="input-wrapper">
               <input
-                v-model="phone"
-                @input="formatPhone"
+                v-model="phoneNumber"
+                @input="formatPhoneNumber"
                 required
                 placeholder="+79957556983"
               />
               <span
                 v-if="!isPhoneValid"
-                class="error-icon"
-                @click="showPhoneError = true"
+                class="warning-icon"
+                @click="showPhoneWarning = true"
                 >&#9888;</span
               >
             </div>
           </div>
-          <div class="btn">
-            <button class="good" type="submit" :disabled="!isFormValid">
+          <div class="button-group">
+            <button
+              class="submit-btn"
+              type="submit"
+              :disabled="!isFormComplete"
+            >
               ОК
             </button>
-            <button type="button" class="cancel" @click="$emit('close')">
+            <button type="button" class="cancel-btn" @click="$emit('close')">
               Отмена
             </button>
           </div>
@@ -61,9 +65,11 @@
     </div>
 
     <!-- Уведомление об ошибке для ФИО -->
-    <div v-if="showDirectorError" class="error-modal">
-      <div class="error-modal-content">
-        <span class="close" @click="showDirectorError = false">&times;</span>
+    <div v-if="showDirectorWarning" class="warning-popup">
+      <div class="warning-content">
+        <span class="close-btn" @click="showDirectorWarning = false"
+          >&times;</span
+        >
         <p>
           Введите корректное ФИО директора. Убедитесь, что оно состоит из трех
           слов и не содержит латинских символов.
@@ -72,9 +78,9 @@
     </div>
 
     <!-- Уведомление об ошибке для телефона -->
-    <div v-if="showPhoneError" class="error-modal">
-      <div class="error-modal-content">
-        <span class="close" @click="showPhoneError = false">&times;</span>
+    <div v-if="showPhoneWarning" class="warning-popup">
+      <div class="warning-content">
+        <span class="close-btn" @click="showPhoneWarning = false">&times;</span>
         <p>Введите корректный номер телефона в формате +79XXXXXXXXX.</p>
       </div>
     </div>
@@ -85,76 +91,82 @@
 export default {
   data() {
     return {
-      name: "",
-      director: "",
-      phone: "",
+      orgName: "",
+      directorName: "",
+      phoneNumber: "",
       isNameValid: true,
       isDirectorValid: true,
       isPhoneValid: true,
-      showModal: true, // Показ модального окна
-      showDirectorError: false,
-      showPhoneError: false,
+      isModalVisible: true, // Показ модального окна
+      showDirectorWarning: false,
+      showPhoneWarning: false,
     };
   },
   computed: {
-    isFormValid() {
+    isFormComplete() {
+      // Являются ли данные корректны
       return (
-        this.name &&
-        this.director &&
-        this.phone &&
+        this.orgName &&
+        this.directorName &&
+        this.phoneNumber &&
         this.isDirectorValid &&
         this.isPhoneValid
       );
     },
   },
   methods: {
-    validateName() {
-      this.name = this.name.replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s]/g, "");
-      this.isNameValid = this.name.trim().length > 0;
+    checkName() {
+      this.orgName = this.orgName.replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s]/g, ""); // Удаление некорректных символов
+      this.isNameValid = this.orgName.trim().length > 0; // Проверка валидности названия
     },
-    validateDirector() {
-      const hasLatinChars = /[a-zA-Z]/.test(this.director);
+    checkDirector() {
+      const hasLatinChars = /[a-zA-Z]/.test(this.directorName); // Проверка на наличие латинских символов
       if (hasLatinChars) {
-        this.director = this.director.replace(/[a-zA-Z]/g, "");
+        // Удаление латинских символов (если они есть)
+        this.directorName = this.directorName.replace(/[a-zA-Z]/g, "");
       }
-      this.director = this.director.replace(/[^а-яА-ЯёЁ\s\-']/g, "");
-      const words = this.director.trim().split(/\s+/);
+      this.directorName = this.directorName.replace(/[^а-яА-ЯёЁ\s\-']/g, ""); // Удаление некорректных символов
+      const words = this.directorName.trim().split(/\s+/); // Проверка валидности имени
       this.isDirectorValid =
         words.length === 3 && words.every((word) => !!word);
     },
 
-    formatPhone() {
-      if (!this.phone.startsWith("+7")) {
-        this.phone = "+79" + this.phone.replace(/[^\d]/g, "");
+    formatPhoneNumber() {
+      if (!this.phoneNumber.startsWith("+7")) {
+        // Форматирование номера телефона
+        this.phoneNumber = "+79" + this.phoneNumber.replace(/[^\d]/g, "");
       } else {
-        this.phone = "+" + this.phone.slice(1).replace(/[^\d]/g, "");
+        this.phoneNumber =
+          "+" + this.phoneNumber.slice(1).replace(/[^\d]/g, "");
       }
-      const phonePattern = /^\+79\d{9}$/;
-      this.isPhoneValid = phonePattern.test(this.phone);
+      const phonePattern = /^\+79\d{9}$/; // Проверка валидности номера телефона
+      this.isPhoneValid = phonePattern.test(this.phoneNumber);
     },
 
-    submitForm() {
-      if (this.isFormValid) {
+    handleFormSubmit() {
+      if (this.isFormComplete) {
+        // Проверка завершенности формы
         this.$emit("add", {
-          name: this.name,
-          director: this.director,
-          phone: this.phone,
+          name: this.orgName,
+          director: this.directorName,
+          phone: this.phoneNumber,
         });
       } else {
-        if (!this.isDirectorValid) this.showDirectorError = true;
-        if (!this.isPhoneValid) this.showPhoneError = true;
+        // Предупреждение
+        if (!this.isDirectorValid) this.showDirectorWarning = true;
+        if (!this.isPhoneValid) this.showPhoneWarning = true;
       }
     },
 
     closeModal() {
-      this.showModal = false;
+      this.isModalVisible = false;
     },
   },
 };
 </script>
 
 <style scoped>
-.modal {
+.modal-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -167,7 +179,7 @@ export default {
   z-index: 1000;
 }
 
-.modal-content {
+.modal-body {
   background-color: white;
   padding: 20px;
   border-radius: 4px;
@@ -176,7 +188,7 @@ export default {
   position: relative;
 }
 
-.close {
+.close-btn {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -184,7 +196,7 @@ export default {
   cursor: pointer;
 }
 
-.close:hover {
+.close-btn:hover {
   color: red;
 }
 
@@ -197,7 +209,7 @@ form {
   flex-direction: column;
 }
 
-.form-group {
+.field-group {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
@@ -208,7 +220,7 @@ label {
   text-align: center;
 }
 
-.input-container {
+.input-wrapper {
   display: flex;
   align-items: center;
   position: relative;
@@ -221,14 +233,14 @@ input {
   border-radius: 4px;
 }
 
-.error-icon {
+.warning-icon {
   margin-left: 10px;
   font-size: 18px;
   color: red;
   cursor: pointer;
 }
 
-.btn {
+.button-group {
   display: flex;
   justify-content: center;
   gap: 15px;
@@ -250,17 +262,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button.cancel {
+button.cancel-btn {
   background-color: #dc3545;
   color: white;
 }
 
-button.cancel:hover {
+button.cancel-btn:hover {
   background-color: #c82333;
 }
 
 /* Уведомление об ошибке */
-.error-modal {
+.warning-popup {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -273,7 +285,7 @@ button.cancel:hover {
   z-index: 1000;
 }
 
-.error-modal-content {
+.warning-content {
   background-color: white;
   padding: 20px;
   border-radius: 4px;
@@ -282,12 +294,12 @@ button.cancel:hover {
   position: relative;
 }
 
-.error-modal-content .close {
+.warning-content .close-btn {
   top: 10px;
   right: 10px;
 }
 
-.error-modal-content p {
+.warning-content p {
   margin: 0;
   color: red;
   font-size: 16px;

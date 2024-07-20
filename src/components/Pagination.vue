@@ -1,19 +1,22 @@
 <template>
-  <div class="pagination">
-    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
+  <div class="pagination-controls">
+    <button
+      @click="goToPage(currentPageNumber - 1)"
+      :disabled="currentPageNumber === 1"
+    >
       Назад
     </button>
     <button
-      v-for="page in totalPages"
+      v-for="page in totalPagesCount"
       :key="page"
-      @click="changePage(page)"
-      :class="{ active: page === currentPage }"
+      @click="goToPage(page)"
+      :class="{ active: page === currentPageNumber }"
     >
       {{ page }}
     </button>
     <button
-      @click="changePage(currentPage + 1)"
-      :disabled="currentPage === totalPages"
+      @click="goToPage(currentPageNumber + 1)"
+      :disabled="currentPageNumber === totalPagesCount"
     >
       Вперед
     </button>
@@ -34,18 +37,18 @@ export default {
   },
   data() {
     return {
-      currentPage: 1,
+      currentPageNumber: 1, // Страница по умолчанию
     };
   },
   computed: {
-    totalPages() {
-      return Math.ceil(this.total / this.pageSize);
+    totalPagesCount() {
+      return Math.ceil(this.total / this.pageSize); //Сколько нам потребуется страниц чтобы заполнить
     },
   },
   methods: {
-    changePage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
+    goToPage(page) {
+      if (page >= 1 && page <= this.totalPagesCount) {
+        this.currentPageNumber = page;
         this.$emit("page-changed", page);
       }
     },
@@ -54,7 +57,7 @@ export default {
 </script>
 
 <style scoped>
-.pagination {
+.pagination-controls {
   display: flex;
   justify-content: center;
   margin-top: 20px;
